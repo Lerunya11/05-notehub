@@ -1,20 +1,24 @@
-// src/services/noteService.ts
 import axios from 'axios';
 import type { Note } from '../types/note';
 
-const token = import.meta.env.VITE_NOTEHUB_TOKEN;
+const token = import.meta.env.VITE_NOTEHUB_TOKEN as string | undefined;
+
 if (!token) {
-  // чтобы быстро поймать ошибку локально / на Vercel
-  // eslint-disable-next-line no-throw-literal
-  throw new Error('Missing VITE_NOTEHUB_TOKEN env variable');
+  if (import.meta.env.DEV) {
+    throw new Error('Missing VITE_NOTEHUB_TOKEN env variable');
+  } else {
+    console.error('VITE_NOTEHUB_TOKEN is missing at build time');
+  }
 }
 
 const api = axios.create({
   baseURL: 'https://notehub-public.goit.study/api',
-  headers: {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  },
+  headers: token
+    ? {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      }
+    : { 'Content-Type': 'application/json' },
 });
 
 export interface FetchNotesParams {
@@ -28,7 +32,7 @@ export interface FetchNotesResponse {
   perPage: number;
   totalPages: number;
   totalItems: number;
-  results: Note[]; // <- ТАК ДОЛЖНО БЫТЬ
+  results: Note[];
 }
 
 export interface CreateNotePayload {
