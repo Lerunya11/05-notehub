@@ -1,61 +1,54 @@
-// src/components/App/App.tsx
-import React, { useState } from 'react';
-import css from './App.module.css';
+import { useState } from 'react';
+import { useDebouncedCallback } from 'use-debounce';
+import { useNotes } from '../../hooks/useNotes';
 import SearchBox from '../SearchBox/SearchBox';
-import NoteList from '../NoteList/NoteList';
 import Pagination from '../Pagination/Pagination';
 import Modal from '../Modal/Modal';
 import NoteForm from '../NoteForm/NoteForm';
-import { useNotes } from '../../hooks/useNotes';
+import NoteList from '../NoteList/NoteList';
+import css from './App.module.css';
 
 const PER_PAGE = 12;
 
 export default function App() {
-  const [page, setPage] = useState(1);          // 1-based
   const [search, setSearch] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
+  const [debounced, setDebounced] = useState('');
+  const [page, setPage] = useState(1);
+  const [open, setOpen] = useState(false);
 
-  const { notes, totalPages, isFetching, isError, error } = useNotes({
+  const onSearchChange = useDebouncedCallback((v: string) => {
+    setDebounced(v);
+    setPage(1);
+  }, 300);
+
+  const { notes, totalPages, isLoading, isError } = useNotes({
     page,
     perPage: PER_PAGE,
-    search,
+    search: debounced || undefined,
   });
-
-  const updateSearch = (value: string) => {
-    setPage(1);
-    setSearch(value);
-  };
 
   return (
     <div className={css.app}>
       <header className={css.toolbar}>
-        <SearchBox onChange={updateSearch} />
-        <button className={css.button} onClick={() => setIsOpen(true)}>
-          Create note +
-        </button>
+        <SearchBox
+          value={search}
+          onChange={(v) => {
+            setSearch(v);
+            onSearchChange(v);
+          }}
+          placeholder="Search notes"
+        />
+        <Pagination pageCount={totalPages} currentPage={page} onPageChange={setPage} />
+        <button className={css.button} onClick={() => setOpen(true)}>Create note +</button>
       </header>
 
-      {/* список */}
-      {isError && <div className={css.state}>Error: {(error as Error).message}</div>}
-      {!isError && notes.length === 0 && !isFetching && (
-        <div className={css.state}>No notes yet.</div>
-      )}
-      {isFetching && <div className={css.state}>Loading…</div>}
-      {notes.length > 0 && <NoteList page={page} search={search} />}
+      {isLoading && <div className={css.helper}>Loading...</div>}
+      {isError && <div className={css.helper}>Error. Try again.</div>}
+      {!isLoading && !isError && <NoteList notes={notes} />}
 
-      {/* пагинация */}
-      {totalPages > 1 && (
-        <Pagination
-          pageCount={totalPages}
-          forcePage={page - 1} // ReactPaginate — 0-based
-          onPageChange={(item: { selected: number }) => setPage(item.selected + 1)}
-        />
-      )}
-
-      {/* модалка создания */}
-      {isOpen && (
-        <Modal onClose={() => setIsOpen(false)}>
-          <NoteForm onClose={() => setIsOpen(false)} />
+      {open && (
+        <Modal onClose={() => setOpen(false)}>
+          <NoteForm onCancel={() => setOpen(false)} />
         </Modal>
       )}
     </div>
