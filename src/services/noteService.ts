@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import type { Note } from '../types/note';
 
@@ -28,11 +29,8 @@ export interface FetchNotesParams {
 }
 
 export interface FetchNotesResponse {
-  page: number;
-  perPage: number;
+  notes: Note[];
   totalPages: number;
-  totalItems: number;
-  results: Note[];
 }
 
 export interface CreateNotePayload {
