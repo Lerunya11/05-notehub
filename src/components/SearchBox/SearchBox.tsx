@@ -1,26 +1,24 @@
-// src/components/SearchBox/SearchBox.tsx
-import React from 'react';
-import { useDebouncedCallback } from 'use-debounce';
+import { useId } from 'react';
 import css from './SearchBox.module.css';
 
-interface Props {
+export interface SearchBoxProps {
+  value: string;
   onChange: (value: string) => void;
+  placeholder?: string;
 }
 
-export default function SearchBox({ onChange }: Props) {
-  const debounced = useDebouncedCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value.trim()),
-    300
-  );
-
+export default function SearchBox({ value, onChange, placeholder }: SearchBoxProps) {
+  const id = useId();
   return (
     <input
+      id={id}
+      name="search"
       className={css.input}
       type="text"
-      placeholder="Search notes"
-      defaultValue=""
-      onChange={debounced}
-      aria-label="Search notes"
+      value={value}
+      onChange={(e) => onChange(e.target.value.trimStart())}
+      placeholder={placeholder ?? 'Search notes'}
+      autoComplete="off"
     />
   );
 }
