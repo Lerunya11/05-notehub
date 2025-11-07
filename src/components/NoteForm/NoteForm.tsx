@@ -1,65 +1,48 @@
-// src/components/NoteForm/NoteForm.tsx
-import React from 'react';
-import { Formik, Form, Field, ErrorMessage } from 'formik';
+import { Formik, Form, Field, ErrorMessage as FormikError } from 'formik';
 import * as Yup from 'yup';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { createNote, type CreateNotePayload } from '../../services/noteService';
+import { NOTES_KEY } from '../../hooks/useNotes';
 import css from './NoteForm.module.css';
-import { useNotes } from '../../hooks/useNotes';
-import type { NoteTag } from '../../types/note';
 
-interface Props {
-  onClose: () => void;
+export interface NoteFormProps {
+  onCancel: () => void;
 }
 
-const schema = Yup.object({
-  title:   Yup.string().min(3).max(50).required('Required'),
-  content: Yup.string().max(500),
-  tag:     Yup.mixed<NoteTag>()
-            .oneOf(['Todo', 'Work', 'Personal', 'Meeting', 'Shopping'])
-            .required('Required'),
+const Schema = Yup.object({
+  title: Yup.string().min(3).max(50).required(),
+  content: Yup.string().max(500).default(''),
+  tag: Yup.mixed<CreateNotePayload['tag']>().oneOf(['Todo', 'Work', 'Personal', 'Meeting', 'Shopping']).required(),
 });
 
-const initialValues = {
-  title: '',
-  content: '',
-  tag: 'Todo' as NoteTag,
-};
-
-export default function NoteForm({ onClose }: Props) {
-  // используем хук для доступа к createNote
-  const { createNote, isCreating } = useNotes({ page: 1, perPage: 1 });
+export default function NoteForm({ onCancel }: NoteFormProps) {
+  const qc = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (payload: CreateNotePayload) => createNote(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [NOTES_KEY] });
+      onCancel();
+    },
+  });
 
   return (
-    <Formik
-      initialValues={initialValues}
-      validationSchema={schema}
-      onSubmit={async (values, { setSubmitting, resetForm }) => {
-        try {
-          await createNote(values);
-          resetForm();
-          onClose();
-        } finally {
-          setSubmitting(false);
-        }
-      }}
+    <Formik<CreateNotePayload>
+      initialValues={{ title: '', content: '', tag: 'Todo' }}
+      validationSchema={Schema}
+      onSubmit={(values) => mutation.mutate(values)}
     >
-      {({ isSubmitting }) => (
+      {({ isValid, isSubmitting }) => (
         <Form className={css.form}>
           <div className={css.formGroup}>
             <label htmlFor="title">Title</label>
-            <Field id="title" name="title" className={css.input} />
-            <ErrorMessage name="title" component="span" className={css.error} />
+            <Field id="title" name="title" type="text" className={css.input} />
+            <span className={css.error}><FormikError name="title" /></span>
           </div>
 
           <div className={css.formGroup}>
             <label htmlFor="content">Content</label>
-            <Field
-              as="textarea"
-              id="content"
-              name="content"
-              rows={8}
-              className={css.textarea}
-            />
-            <ErrorMessage name="content" component="span" className={css.error} />
+            <Field as="textarea" id="content" name="content" rows={8} className={css.textarea} />
+            <span className={css.error}><FormikError name="content" /></span>
           </div>
 
           <div className={css.formGroup}>
@@ -71,24 +54,12 @@ export default function NoteForm({ onClose }: Props) {
               <option value="Meeting">Meeting</option>
               <option value="Shopping">Shopping</option>
             </Field>
-            <ErrorMessage name="tag" component="span" className={css.error} />
+            <span className={css.error}><FormikError name="tag" /></span>
           </div>
 
           <div className={css.actions}>
-            <button
-              type="button"
-              className={css.cancelButton}
-              onClick={onClose}
-              disabled={isSubmitting || isCreating}
-            >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              className={css.submitButton}
-              disabled={isSubmitting || isCreating}
-            >
+            <button type="button" className={css.cancelButton} onClick={onCancel}>Cancel</button>
+            <button type="submit" className={css.submitButton} disabled={!isValid || isSubmitting || mutation.isPending}>
               Create note
             </button>
           </div>
