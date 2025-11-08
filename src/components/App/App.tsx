@@ -13,19 +13,21 @@ import type { CreateNotePayload } from '../../services/noteService';
 import css from './App.module.css';
 
 export default function App() {
-  // состояние страницы/поиска/модалки
+  // страница
   const [page, setPage] = useState(1);
   const [perPage] = useState(12);
+
+  // видимое значение инпута + реальный поисковый запрос (дебаунс)
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+
   const [isOpen, setIsOpen] = useState(false);
 
-  // дебаунс поиска (автопроверка это проверяет)
   const onSearchChange = useDebouncedCallback((value: string) => {
     setSearch(value.trim());
     setPage(1);
   }, 300);
 
-  // данные с сервера (из нашего кастомного хука, который уже принят в других пунктах)
   const {
     notes,
     totalPages,
@@ -36,11 +38,9 @@ export default function App() {
     deleteNote,
   } = useNotes({ page, perPage, search });
 
-  // модалка
   const openModal = () => setIsOpen(true);
   const closeModal = () => setIsOpen(false);
 
-  // создание заметки
   const handleCreate = async (payload: CreateNotePayload) => {
     await createNote(payload);
     closeModal();
@@ -49,21 +49,29 @@ export default function App() {
   return (
     <div className={css.app}>
       <header className={css.toolbar}>
-        <SearchBox onChange={onSearchChange} />
-        {/* ВАЖНО: пагинация только если страниц > 1 (фикс по пункту 8) */}
+        <SearchBox
+          value={searchInput}
+          onChange={(val) => {
+            setSearchInput(val);
+            onSearchChange(val);
+          }}
+          placeholder="Search notes"
+        />
+
+        {/* Пагинация только если страниц > 1 */}
         {totalPages > 1 && (
           <Pagination
-            page={page}
+            currentPage={page}         // ← имя пропа, как в твоём Pagination
             pageCount={totalPages}
             onPageChange={setPage}
           />
         )}
+
         <button className={css.button} onClick={openModal}>
           Create note +
         </button>
       </header>
 
-      {/* NoteList получает ИМЕННО массив notes через пропсы (это у тебя уже принято, сохраняем) */}
       <main>
         <NoteList
           notes={notes}
