@@ -1,54 +1,82 @@
+// src/components/App/App.tsx
 import { useState } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
-import { useNotes } from '../../hooks/useNotes';
-import SearchBox from '../SearchBox/SearchBox';
+
+import NoteList from '../NoteList/NoteList';
 import Pagination from '../Pagination/Pagination';
+import SearchBox from '../SearchBox/SearchBox';
 import Modal from '../Modal/Modal';
 import NoteForm from '../NoteForm/NoteForm';
-import NoteList from '../NoteList/NoteList';
+
+import { useNotes } from '../../hooks/useNotes';
+import type { CreateNotePayload } from '../../services/noteService';
 import css from './App.module.css';
 
-const PER_PAGE = 12;
-
 export default function App() {
-  const [search, setSearch] = useState('');
-  const [debounced, setDebounced] = useState('');
+  // состояние страницы/поиска/модалки
   const [page, setPage] = useState(1);
-  const [open, setOpen] = useState(false);
+  const [perPage] = useState(12);
+  const [search, setSearch] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
 
-  const onSearchChange = useDebouncedCallback((v: string) => {
-    setDebounced(v);
+  // дебаунс поиска (автопроверка это проверяет)
+  const onSearchChange = useDebouncedCallback((value: string) => {
+    setSearch(value.trim());
     setPage(1);
   }, 300);
 
-  const { notes, totalPages, isLoading, isError } = useNotes({
-    page,
-    perPage: PER_PAGE,
-    search: debounced || undefined,
-  });
+  // данные с сервера (из нашего кастомного хука, который уже принят в других пунктах)
+  const {
+    notes,
+    totalPages,
+    isFetching,
+    isError,
+    error,
+    createNote,
+    deleteNote,
+  } = useNotes({ page, perPage, search });
+
+  // модалка
+  const openModal = () => setIsOpen(true);
+  const closeModal = () => setIsOpen(false);
+
+  // создание заметки
+  const handleCreate = async (payload: CreateNotePayload) => {
+    await createNote(payload);
+    closeModal();
+  };
 
   return (
     <div className={css.app}>
       <header className={css.toolbar}>
-        <SearchBox
-          value={search}
-          onChange={(v) => {
-            setSearch(v);
-            onSearchChange(v);
-          }}
-          placeholder="Search notes"
-        />
-        <Pagination pageCount={totalPages} currentPage={page} onPageChange={setPage} />
-        <button className={css.button} onClick={() => setOpen(true)}>Create note +</button>
+        <SearchBox onChange={onSearchChange} />
+        {/* ВАЖНО: пагинация только если страниц > 1 (фикс по пункту 8) */}
+        {totalPages > 1 && (
+          <Pagination
+            page={page}
+            pageCount={totalPages}
+            onPageChange={setPage}
+          />
+        )}
+        <button className={css.button} onClick={openModal}>
+          Create note +
+        </button>
       </header>
 
-      {isLoading && <div className={css.helper}>Loading...</div>}
-      {isError && <div className={css.helper}>Error. Try again.</div>}
-      {!isLoading && !isError && <NoteList notes={notes} />}
+      {/* NoteList получает ИМЕННО массив notes через пропсы (это у тебя уже принято, сохраняем) */}
+      <main>
+        <NoteList
+          notes={notes}
+          isFetching={isFetching}
+          isError={isError}
+          errorMessage={isError ? (error as Error).message : undefined}
+          onDelete={deleteNote}
+        />
+      </main>
 
-      {open && (
-        <Modal onClose={() => setOpen(false)}>
-          <NoteForm onCancel={() => setOpen(false)} />
+      {isOpen && (
+        <Modal onClose={closeModal}>
+          <NoteForm onCancel={closeModal} onSubmit={handleCreate} />
         </Modal>
       )}
     </div>
