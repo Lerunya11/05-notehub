@@ -3,25 +3,17 @@ import * as Yup from 'yup';
 import css from './NoteForm.module.css';
 import type { CreateNotePayload } from '../../services/noteService';
 
-// 🔹 Типизация пропсов
 export interface NoteFormProps {
   onCancel: () => void;
-  onSubmit: (payload: CreateNotePayload) => void;
+  onSubmit: (payload: CreateNotePayload) => Promise<void> | void;
 }
 
-// 🔹 Схема валидации (Yup)
 const noteSchema = Yup.object().shape({
-  title: Yup.string()
-    .min(2, 'Too short!')
-    .max(50, 'Too long!')
-    .required('Title is required'),
-  content: Yup.string()
-    .min(5, 'Too short!')
-    .max(500, 'Too long!')
-    .required('Content is required'),
+  title: Yup.string().min(2).max(50).required('Title is required'),
+  content: Yup.string().min(5).max(500).required('Content is required'),
   tag: Yup.mixed<'Todo' | 'Work' | 'Personal' | 'Meeting' | 'Shopping'>()
     .oneOf(['Todo', 'Work', 'Personal', 'Meeting', 'Shopping'])
-    .required('Select a tag'),
+    .required(),
 });
 
 export default function NoteForm({ onCancel, onSubmit }: NoteFormProps) {
@@ -47,65 +39,51 @@ export default function NoteForm({ onCancel, onSubmit }: NoteFormProps) {
           <Form className={css.form}>
             <h2 className={css.title}>Create a new note</h2>
 
-            <label className={css.label} htmlFor="title">
+            <label htmlFor="title" className={css.label}>
               Title
             </label>
-            <Field
-              className={css.input}
-              id="title"
-              name="title"
-              placeholder="Enter title"
-            />
-            <ErrorMessage
-              className={css.error}
-              name="title"
-              component="div"
-            />
+            <Field id="title" name="title" className={css.input} />
+            <ErrorMessage name="title" component="div" className={css.error} />
 
-            <label className={css.label} htmlFor="content">
+            <label htmlFor="content" className={css.label}>
               Content
             </label>
             <Field
-              className={css.textarea}
               as="textarea"
               id="content"
               name="content"
-              placeholder="Write your note..."
+              className={css.textarea}
             />
             <ErrorMessage
-              className={css.error}
               name="content"
               component="div"
+              className={css.error}
             />
 
-            <label className={css.label} htmlFor="tag">
+            <label htmlFor="tag" className={css.label}>
               Tag
             </label>
-            <Field className={css.select} as="select" id="tag" name="tag">
+            <Field as="select" id="tag" name="tag" className={css.select}>
               <option value="Todo">Todo</option>
               <option value="Work">Work</option>
               <option value="Personal">Personal</option>
               <option value="Meeting">Meeting</option>
               <option value="Shopping">Shopping</option>
             </Field>
-            <ErrorMessage
-              className={css.error}
-              name="tag"
-              component="div"
-            />
+            <ErrorMessage name="tag" component="div" className={css.error} />
 
             <div className={css.buttons}>
               <button
-                className={css.cancel}
                 type="button"
+                className={css.cancel}
                 onClick={onCancel}
                 disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
-                className={css.submit}
                 type="submit"
+                className={css.submit}
                 disabled={isSubmitting}
               >
                 Create
