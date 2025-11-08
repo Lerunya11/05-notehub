@@ -1,4 +1,3 @@
-// src/components/App/App.tsx
 import { useState } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 
@@ -7,20 +6,14 @@ import Pagination from '../Pagination/Pagination';
 import SearchBox from '../SearchBox/SearchBox';
 import Modal from '../Modal/Modal';
 import NoteForm from '../NoteForm/NoteForm';
-
 import { useNotes } from '../../hooks/useNotes';
 import type { CreateNotePayload } from '../../services/noteService';
 import css from './App.module.css';
 
 export default function App() {
-  // страница
   const [page, setPage] = useState(1);
   const [perPage] = useState(12);
-
-  // видимое значение инпута + реальный поисковый запрос (дебаунс)
-  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-
   const [isOpen, setIsOpen] = useState(false);
 
   const onSearchChange = useDebouncedCallback((value: string) => {
@@ -28,15 +21,8 @@ export default function App() {
     setPage(1);
   }, 300);
 
-  const {
-    notes,
-    totalPages,
-    isFetching,
-    isError,
-    error,
-    createNote,
-    deleteNote,
-  } = useNotes({ page, perPage, search });
+  const { notes, totalPages, isFetching, isError, error, createNote, deleteNote } =
+    useNotes({ page, perPage, search });
 
   const openModal = () => setIsOpen(true);
   const closeModal = () => setIsOpen(false);
@@ -49,24 +35,14 @@ export default function App() {
   return (
     <div className={css.app}>
       <header className={css.toolbar}>
-        <SearchBox
-          value={searchInput}
-          onChange={(val) => {
-            setSearchInput(val);
-            onSearchChange(val);
-          }}
-          placeholder="Search notes"
-        />
-
-        {/* Пагинация только если страниц > 1 */}
+        <SearchBox value={search} onChange={onSearchChange} />
         {totalPages > 1 && (
           <Pagination
-            currentPage={page}         // ← имя пропа, как в твоём Pagination
             pageCount={totalPages}
+            currentPage={page}
             onPageChange={setPage}
           />
         )}
-
         <button className={css.button} onClick={openModal}>
           Create note +
         </button>
