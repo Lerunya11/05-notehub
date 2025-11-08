@@ -1,3 +1,4 @@
+// src/components/App/App.tsx
 import { useState } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 
@@ -6,6 +7,7 @@ import Pagination from '../Pagination/Pagination';
 import SearchBox from '../SearchBox/SearchBox';
 import Modal from '../Modal/Modal';
 import NoteForm from '../NoteForm/NoteForm';
+
 import { useNotes } from '../../hooks/useNotes';
 import type { CreateNotePayload } from '../../services/noteService';
 import css from './App.module.css';
@@ -21,8 +23,15 @@ export default function App() {
     setPage(1);
   }, 300);
 
-  const { notes, totalPages, isFetching, isError, error, createNote, deleteNote } =
-    useNotes({ page, perPage, search });
+  const {
+    notes,
+    totalPages,
+    isFetching,
+    isError,
+    error,
+    createNote,
+    deleteNote,
+  } = useNotes({ page, perPage, search });
 
   const openModal = () => setIsOpen(true);
   const closeModal = () => setIsOpen(false);
@@ -35,7 +44,9 @@ export default function App() {
   return (
     <div className={css.app}>
       <header className={css.toolbar}>
+        {/* твой SearchBox ожидает { value, onChange } */}
         <SearchBox value={search} onChange={onSearchChange} />
+        {/* пагинацию показываем только если страниц > 1 */}
         {totalPages > 1 && (
           <Pagination
             pageCount={totalPages}
