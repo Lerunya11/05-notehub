@@ -1,35 +1,43 @@
+// src/components/Pagination/Pagination.tsx
 import ReactPaginate from 'react-paginate';
+import type { FC } from 'react';
+
 import css from './Pagination.module.css';
 
-export interface PaginationProps {
-  pageCount: number;
-  currentPage: number;
+interface PaginationProps {
+  page: number;
+  totalPages: number;
   onPageChange: (page: number) => void;
 }
 
-export default function Pagination({
-  pageCount,
-  currentPage,
-  onPageChange,
-}: PaginationProps) {
-  if (!Number.isFinite(pageCount) || pageCount <= 1) return null;
+const Pagination: FC<PaginationProps> = ({ page, totalPages, onPageChange }) => {
+  // если всего одна страница — пагинация не нужна
+  if (totalPages <= 1) {
+    return null;
+  }
 
   return (
     <ReactPaginate
-      className={css.pagination}
-      pageLinkClassName={css.pageLink}
-      previousLinkClassName={css.pageLink}
-      nextLinkClassName={css.pageLink}
-      breakLinkClassName={css.pageLink}
+      // сколько всего страниц
+      pageCount={totalPages}
+      // текущая страница (ReactPaginate нумерует с 0)
+      forcePage={page - 1}
+      // колбэк, где мы конвертируем номер страницы обратно в 1-based
+      onPageChange={selectedItem => onPageChange(selectedItem.selected + 1)}
+      // подписи кнопок
+      previousLabel="<"
+      nextLabel=">"
+      breakLabel="..."
+      // классы для стилизации
+      containerClassName={css.pagination}
+      pageClassName={css.page}
       activeClassName={css.active}
+      previousClassName={css.prev}
+      nextClassName={css.next}
+      breakClassName={css.break}
       disabledClassName={css.disabled}
-      onPageChange={(e) => onPageChange(e.selected + 1)}
-      pageCount={pageCount}
-      forcePage={Math.max(0, currentPage - 1)}
-      marginPagesDisplayed={1}
-      pageRangeDisplayed={3}
-      previousLabel="←"
-      nextLabel="→"
     />
   );
-}
+};
+
+export default Pagination;

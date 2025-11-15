@@ -1,89 +1,101 @@
-// src/components/App/App.tsx
 import { useState } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 
 import NoteList from '../NoteList/NoteList';
 import Pagination from '../Pagination/Pagination';
-import SearchBox from '../SearchBox/SearchBox';
 import Modal from '../Modal/Modal';
 import NoteForm from '../NoteForm/NoteForm';
+import SearchBox from '../SearchBox/SearchBox';
 
 import { useNotes } from '../../hooks/useNotes';
-import type { CreateNotePayload } from '../../services/noteService';
+
 import css from './App.module.css';
 
-export default function App() {
-  // локальные состояния
-  const [page, setPage] = useState(1);
-  const [perPage] = useState(12);
-  const [search, setSearch] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
+const PER_PAGE = 12;
 
-  // дебаунс поиска (+ сброс страницы на 1)
-  const onSearchChange = useDebouncedCallback((value: string) => {
+const App = () => {
+  // страница
+  const [page, setPage] = useState(1);
+
+  // "сырое" значение инпута поиска
+  const [searchInput, setSearchInput] = useState('');
+
+  // реальное значение для запроса (установится с задержкой)
+  const [search, setSearch] = useState('');
+
+  // дебаунс: ждём 300мс после ввода и только потом обновляем search
+  const debouncedUpdateSearch = useDebouncedCallback((value: string) => {
     setSearch(value.trim());
-    setPage(1);
+    setPage(1); // при новом поиске всегда на первую страницу
   }, 300);
 
-  // данные/мутации
-  const {
-    notes,
-    totalPages,
-    isFetching,
-    isError,
-    error,
-    createNote,
-    deleteNote,
-  } = useNotes({ page, perPage, search });
-
-  // модалка
-  const openModal = () => setIsOpen(true);
-  const closeModal = () => setIsOpen(false);
-
-  // создание заметки
-  const handleCreate = async (payload: CreateNotePayload) => {
-    await createNote(payload);
-    closeModal();
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    debouncedUpdateSearch(value);
   };
 
-  // безопасное значение числа страниц
-  const pages = Number.isFinite(totalPages) ? totalPages : 1;
+  // модалка
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
+
+  // получаем данные заметок через хук useNotes (TanStack Query)
+  const { data, isLoading, isError } = useNotes({
+    page,
+    perPage: PER_PAGE,
+    search: search || undefined,
+  });
+
+  const notes = data?.notes ?? [];
+  const totalPages = data?.totalPages ?? 0;
+  const shouldShowPagination = totalPages > 1;
+
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage);
+  };
 
   return (
     <div className={css.app}>
       <header className={css.toolbar}>
-        {/* SearchBox ожидает value и onChange */}
-        <SearchBox value={search} onChange={onSearchChange} />
+        {/* слева — поиск */}
+        <SearchBox value={searchInput} onChange={handleSearchChange} />
 
-        {/* ВАЖНО: пагинация показывается ТОЛЬКО когда страниц > 1 */}
-        {pages > 1 && (
+        {/* по центру — пагинация (только если страниц больше 1) */}
+        {shouldShowPagination && (
           <Pagination
-            pageCount={pages}
-            currentPage={page}
-            onPageChange={setPage}
+            page={page}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
           />
         )}
 
-        <button className={css.button} onClick={openModal}>
-          Создать заметку +
+        {/* справа — кнопка создания заметки */}
+        <button
+          type="button"
+          className={css.button}
+          onClick={handleOpenModal}
+        >
+          Create note +
         </button>
       </header>
 
-      <main>
-        <NoteList
-          notes={notes}
-          isFetching={isFetching}
-          isError={isError}
-          errorMessage={isError ? (error as Error).message : undefined}
-          onDelete={deleteNote}
-        />
+      <main className={css.main}>
+        {notes.length > 0 && (
+          <NoteList
+            notes={notes}
+            isLoading={isLoading}
+            isError={!!isError}
+          />
+        )}
       </main>
 
-      {isOpen && (
-        <Modal onClose={closeModal}>
-          <NoteForm onCancel={closeModal} onSubmit={handleCreate} />
+      {isModalOpen && (
+        <Modal onClose={handleCloseModal}>
+          <NoteForm onCancel={handleCloseModal} />
         </Modal>
       )}
     </div>
   );
-}
+};
+
+export default App;
